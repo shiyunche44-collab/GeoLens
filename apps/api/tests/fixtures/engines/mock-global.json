@@ -1,0 +1,6 @@
+{
+  "prompt": "Best GEO analytics tools?",
+  "expect": {
+    "min_citations": 1
+  }
+}

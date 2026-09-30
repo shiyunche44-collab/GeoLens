@@ -1,0 +1,35 @@
+{
+  "_comment": "Golden expectations for analysis/pipeline. Output changes require bumping ANALYZER_VERSION and updating this file (and analyzer_version below).",
+  "analyzer_version": "2026.09.1",
+  "brands": [
+    {"key": "geolens", "name": "GeoLens", "aliases": ["极光透镜"], "domains": ["geolens.example.com"]},
+    {"key": "rankpilot", "name": "RankPilot", "domains": ["rankpilot.example.com"], "is_competitor": true},
+    {"key": "citely", "name": "Citely", "aliases": ["citely.ai"], "is_competitor": true}
+  ],
+  "from_raw_snapshot": [
+    {
+      "engine": "perplexity",
+      "mentions": [["rankpilot", 1], ["geolens", 2], ["citely", 3]],
+      "citations": [
+        ["https://rankpilot.example.com/pricing", "rankpilot.example.com", 1, "rankpilot"],
+        ["https://geolens.example.com/docs", "geolens.example.com", 2, "geolens"],
+        ["https://reviews.example.org/geo-tools", "reviews.example.org", 3, null]
+      ]
+    },
+    {
+      "engine": "chatgpt",
+      "mentions": [["rankpilot", 1], ["geolens", 2]],
+      "citations": [
+        ["https://rankpilot.example.com/pricing", "rankpilot.example.com", 1, "rankpilot"],
+        ["https://geolens.example.com/docs", "geolens.example.com", 2, "geolens"]
+      ]
+    },
+    {
+      "engine": "deepseek",
+      "mentions": [["geolens", 1], ["rankpilot", 2], ["citely", 3]],
+      "citations": [
+        ["https://geolens.example.com/docs", "geolens.example.com", 1, "geolens"]
+      ]
+    }
+  ]
+}

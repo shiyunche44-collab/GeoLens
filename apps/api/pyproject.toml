@@ -1,0 +1,69 @@
+[project]
+name = "geolens"
+version = "0.1.0"
+description = "GeoLens — GEO (Generative Engine Optimization) analytics platform: API + workers"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi>=0.140",
+    "uvicorn[standard]>=0.50",
+    "pydantic>=2.13",
+    "pydantic-settings>=2.15",
+    "sqlalchemy>=2.1",
+    "psycopg[binary]>=3.3",
+    "alembic>=1.20",
+    "celery[redis]>=5.6",
+    "httpx>=0.28",
+    "boto3>=1.43",
+    "beautifulsoup4>=4.15",
+    "python-dotenv>=1.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1",
+    "pytest-cov>=7.1",
+    "respx>=0.23",
+    "ruff>=0.16",
+    "pyright>=1.1.414",
+    "import-linter>=2.15",
+    "grimp>=3.17",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["geolens"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF", "N"]
+ignore = ["RUF001", "RUF002", "RUF003", "B008"]
+
+[tool.pyright]
+include = ["geolens"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+# Strict where contracts live: tenancy, public module interfaces, pure domain code.
+strict = [
+    "geolens/core/tenancy.py",
+    "geolens/core/repository.py",
+    "geolens/core/events.py",
+    "geolens/modules/*/public.py",
+    "geolens/modules/analysis/pipeline",
+    "geolens/modules/metrics/definitions.py",
+    "geolens/modules/audit/rules",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: needs PostgreSQL (DATABASE_URL); skipped when unreachable",
+]

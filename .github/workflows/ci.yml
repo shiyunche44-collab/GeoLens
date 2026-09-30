@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API · lint, types, architecture, tests, migrations
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: geolens
+          POSTGRES_PASSWORD: geolens
+          POSTGRES_DB: geolens
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U geolens" --health-interval 3s --health-retries 20
+    env:
+      GEOLENS_DATABASE_URL: postgresql+psycopg://geolens:geolens@localhost:5432/geolens
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: Typecheck
+        run: uv run pyright
+      - name: Architecture contracts (import-linter)
+        run: uv run lint-imports
+      - name: Architecture tests
+        run: uv run pytest -q tests/architecture
+      - name: Migrations have no drift
+        run: uv run alembic upgrade head && uv run alembic check
+      - name: Tests (unit, contract, golden, integration)
+        env:
+          GEOLENS_DATABASE_URL: postgresql+psycopg://geolens:geolens@localhost:5432/geolens_test
+        run: |
+          PGPASSWORD=geolens psql -h localhost -U geolens -d geolens -c "CREATE DATABASE geolens_test"
+          uv run pytest -q --cov=geolens --cov-report=term-missing:skip-covered
+
+  web:
+    name: Web · generated client, lint, types, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: apps/web/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Generated API client matches openapi.json
+        run: pnpm gen:api && git diff --exit-code -- src/lib/api/schema.d.ts
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  governance:
+    name: Governance · ADR for rule changes, API breaking changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rule changes need an ADR
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'no-adr-needed') }}
+        run: scripts/check-adr.sh "origin/${{ github.base_ref }}"
+      - name: No breaking API changes (oasdiff)
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'api-breaking-approved') }}
+        run: |
+          if ! git show "origin/${{ github.base_ref }}:apps/api/openapi.json" > /tmp/base.json 2>/dev/null; then
+            echo "No base openapi.json yet — skipping."; exit 0
+          fi
+          docker run --rm -v /tmp:/base -v "$PWD/apps/api:/head" tufin/oasdiff \
+            breaking /base/base.json /head/openapi.json --fail-on ERR

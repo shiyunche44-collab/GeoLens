@@ -1,0 +1,6 @@
+{
+  "prompt": "最好的 GEO 分析工具有哪些？",
+  "expect": {
+    "min_citations": 1
+  }
+}

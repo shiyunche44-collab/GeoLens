@@ -1,0 +1,27 @@
+{
+  "prompt": "最好的 GEO 分析工具有哪些？",
+  "response": {
+    "id": "chatcmpl-fixture",
+    "object": "chat.completion",
+    "created": 1790000000,
+    "model": "qwen-plus",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "常见的 GEO 分析工具包括：\n1. **GeoLens**：覆盖国内外 AI 引擎，参见 https://geolens.example.com/docs 。\n2. **RankPilot**：偏重 SEO。\n3. Citely。"
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 18,
+      "completion_tokens": 120,
+      "total_tokens": 138
+    }
+  },
+  "expect": {
+    "min_citations": 1
+  }
+}

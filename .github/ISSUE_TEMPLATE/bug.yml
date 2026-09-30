@@ -1,0 +1,14 @@
+name: 缺陷
+description: 报告一个问题
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 现象与复现步骤
+    validations: { required: true }
+  - type: dropdown
+    id: module
+    attributes:
+      label: 所属模块
+      options: [identity, projects, collection, analysis, audit, metrics, web, infra, 不确定]

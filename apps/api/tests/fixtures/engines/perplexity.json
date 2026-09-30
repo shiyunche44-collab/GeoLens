@@ -1,0 +1,44 @@
+{
+  "prompt": "Best GEO analytics tools?",
+  "response": {
+    "id": "chatcmpl-fixture",
+    "object": "chat.completion",
+    "created": 1790000000,
+    "model": "sonar",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Top tools are RankPilot [1] and GeoLens [2]; Citely is newer [3]."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 18,
+      "completion_tokens": 120,
+      "total_tokens": 138
+    },
+    "search_results": [
+      {
+        "title": "RankPilot pricing",
+        "url": "https://rankpilot.example.com/pricing",
+        "date": "2026-08-01"
+      },
+      {
+        "title": "GeoLens docs",
+        "url": "https://www.geolens.example.com/docs/",
+        "date": "2026-09-10"
+      },
+      {
+        "title": "Review roundup",
+        "url": "https://reviews.example.org/geo-tools?utm_medium=x",
+        "date": null
+      }
+    ]
+  },
+  "expect": {
+    "min_citations": 3
+  }
+}

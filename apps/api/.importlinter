@@ -1,0 +1,59 @@
+# Architecture contracts (fitness functions). Run: `uv run lint-imports`.
+# Changing or loosening ANY contract below requires an ADR (docs/adr/).
+[importlinter]
+root_package = geolens
+include_external_packages = False
+
+[importlinter:contract:top-layers]
+name = Composition root > modules > core (core never imports modules)
+type = layers
+layers =
+    geolens.app
+    geolens.modules
+    geolens.core
+
+[importlinter:contract:module-boundaries]
+name = Modules only talk to each other through <module>.public
+type = independence
+modules =
+    geolens.modules.identity
+    geolens.modules.projects
+    geolens.modules.collection
+    geolens.modules.analysis
+    geolens.modules.audit
+    geolens.modules.metrics
+ignore_imports =
+    geolens.modules.** -> geolens.modules.*.public
+unmatched_ignore_imports_alerting = none
+
+[importlinter:contract:module-layers]
+name = Inside a module: api/tasks/public > service > repository > models > domain > schemas
+type = layers
+containers =
+    geolens.modules.identity
+    geolens.modules.projects
+    geolens.modules.collection
+    geolens.modules.analysis
+    geolens.modules.audit
+    geolens.modules.metrics
+layers =
+    (api) | (tasks) | (public)
+    service
+    (repository) | (crawler)
+    (models)
+    (adapters) | (pipeline) | (rules) | (definitions)
+    (schemas) | (events)
+
+[importlinter:contract:pure-domain]
+name = Analysis pipeline and metric definitions stay pure (no DB, queue, storage)
+type = forbidden
+source_modules =
+    geolens.modules.analysis.pipeline
+    geolens.modules.metrics.definitions
+    geolens.modules.audit.rules
+forbidden_modules =
+    geolens.core.db
+    geolens.core.queue
+    geolens.core.events
+    geolens.core.storage
+    geolens.core.repository

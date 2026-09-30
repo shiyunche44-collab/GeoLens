@@ -1,0 +1,25 @@
+# env & data
+.env
+.data/
+arch-report.md
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# web
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
+dump.rdb

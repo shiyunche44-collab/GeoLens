@@ -1,0 +1,36 @@
+{
+  "_comment": "Hand-computed expectations for metrics/definitions.py. Changing a formula means updating these numbers AND writing an ADR.",
+  "brands": ["A", "B", "C"],
+  "observations": [
+    {"mentions": {"A": 1, "B": 2}, "cited": ["A"]},
+    {"mentions": {"B": 1}, "cited": []},
+    {"mentions": {"A": 2, "C": 1}, "cited": ["A", "C"]},
+    {"mentions": {}, "cited": []}
+  ],
+  "expected": {
+    "A": {
+      "counts": {"n_responses": 4, "n_mentioned": 2, "n_cited": 2, "position_sum": 3, "total_brand_mentions": 5},
+      "mention_rate": {"value": 0.5, "n": 4, "ci_low": 0.150036, "ci_high": 0.849964},
+      "share_of_voice": 0.4,
+      "avg_position": 1.5,
+      "citation_rate": {"value": 0.5, "n": 4, "ci_low": 0.150036, "ci_high": 0.849964},
+      "visibility_score": 50.33
+    },
+    "B": {
+      "counts": {"n_responses": 4, "n_mentioned": 2, "n_cited": 0, "position_sum": 3, "total_brand_mentions": 5},
+      "mention_rate": {"value": 0.5, "n": 4, "ci_low": 0.150036, "ci_high": 0.849964},
+      "share_of_voice": 0.4,
+      "avg_position": 1.5,
+      "citation_rate": {"value": 0.0, "n": 4, "ci_low": 0.0, "ci_high": 0.4899},
+      "visibility_score": 45.33
+    },
+    "C": {
+      "counts": {"n_responses": 4, "n_mentioned": 1, "n_cited": 1, "position_sum": 1, "total_brand_mentions": 5},
+      "mention_rate": {"value": 0.25, "n": 4, "ci_low": 0.045586, "ci_high": 0.699364},
+      "share_of_voice": 0.2,
+      "avg_position": 1.0,
+      "citation_rate": {"value": 0.25, "n": 4, "ci_low": 0.045586, "ci_high": 0.699364},
+      "visibility_score": 38.5
+    }
+  }
+}

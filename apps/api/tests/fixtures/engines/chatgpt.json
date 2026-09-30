@@ -1,0 +1,27 @@
+{
+  "prompt": "Best GEO analytics tools?",
+  "response": {
+    "id": "chatcmpl-fixture",
+    "object": "chat.completion",
+    "created": 1790000000,
+    "model": "gpt-4o-mini",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "Popular options:\n1. **RankPilot** – strong SEO roots (https://rankpilot.example.com/pricing).\n2. **GeoLens** – tracks ChatGPT, Perplexity and DeepSeek. See [docs](https://geolens.example.com/docs?utm_source=chatgpt.com)."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 18,
+      "completion_tokens": 120,
+      "total_tokens": 138
+    }
+  },
+  "expect": {
+    "min_citations": 2
+  }
+}

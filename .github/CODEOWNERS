@@ -1,0 +1,10 @@
+# Architecture rule files need an explicit review (enable "Require review from
+# Code Owners" in branch protection once the team grows beyond one person).
+/docs/adr/                                        @shiyunche44-collab
+/apps/api/.importlinter                           @shiyunche44-collab
+/apps/api/tests/architecture/                     @shiyunche44-collab
+/apps/api/tests/golden/                           @shiyunche44-collab
+/apps/api/geolens/core/                           @shiyunche44-collab
+/apps/api/geolens/modules/metrics/definitions.py  @shiyunche44-collab
+/apps/web/eslint.config.mjs                       @shiyunche44-collab
+/.github/                                         @shiyunche44-collab
