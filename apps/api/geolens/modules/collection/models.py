@@ -42,6 +42,8 @@ class QueryTask(WorkspaceScopedMixin, TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(16), default="pending")  # pending|done|failed
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text)
+    # Set as soon as the raw answer is stored, so a failed parse can be reprocessed later.
+    raw_uri: Mapped[str | None] = mapped_column(String(1024))
 
 
 class Response(WorkspaceScopedMixin, TimestampMixin, Base):

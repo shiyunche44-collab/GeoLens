@@ -4,7 +4,7 @@ x-api-env: &api-env
   GEOLENS_DATABASE_URL: postgresql+psycopg://geolens:geolens@postgres:5432/geolens
   GEOLENS_REDIS_URL: redis://redis:6379/0
   GEOLENS_STORAGE_BACKEND: s3
-  GEOLENS_S3_ENDPOINT_URL: http://minio:9000
+  GEOLENS_S3_ENDPOINT_URL: http://s3:8333
   GEOLENS_S3_ACCESS_KEY: geolens
   GEOLENS_S3_SECRET_KEY: geolens-secret
   GEOLENS_S3_BUCKET: geolens-raw
@@ -27,21 +27,12 @@ services:
     image: redis:7-alpine
     ports: ["6379:6379"]
 
-  minio:
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: geolens
-      MINIO_ROOT_PASSWORD: geolens-secret
-    ports: ["9000:9000", "9001:9001"]
-    volumes: [miniodata:/data]
-
-  minio-init:
-    image: minio/mc:latest
-    depends_on: [minio]
-    entrypoint: >
-      sh -c "until mc alias set local http://minio:9000 geolens geolens-secret; do sleep 1; done;
-             mc mb --ignore-existing local/geolens-raw"
+  # S3-compatible object store for raw snapshots (MinIO no longer ships community images).
+  s3:
+    image: chrislusf/seaweedfs:latest
+    command: server -dir=/data -s3 -s3.port=8333 -ip.bind=0.0.0.0
+    ports: ["8333:8333"]
+    volumes: [s3data:/data]
 
   migrate:
     build: apps/api
@@ -68,7 +59,7 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_started }
-      minio-init: { condition: service_completed_successfully }
+      s3: { condition: service_started }
 
   web:
     build:
@@ -79,4 +70,4 @@ services:
 
 volumes:
   pgdata:
-  miniodata:
+  s3data:

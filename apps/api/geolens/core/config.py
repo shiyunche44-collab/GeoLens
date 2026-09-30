@@ -6,7 +6,9 @@ from typing import Literal
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_REPO_ROOT = Path(__file__).resolve().parents[4]
+_API_ROOT = Path(__file__).resolve().parents[2]  # apps/api (or /app in the image)
+# Repo root = the directory holding apps/api; falls back to the API root in containers.
+_REPO_ROOT = next((p for p in _API_ROOT.parents if (p / "apps" / "api").is_dir()), _API_ROOT)
 
 # Engine credentials (DEEPSEEK_API_KEY, ...) are read from the process env by the
 # adapters, so export the repo .env there too. Tests stay hermetic.

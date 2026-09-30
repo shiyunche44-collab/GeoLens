@@ -49,7 +49,7 @@ flowchart TB
   subgraph Data[数据层]
     PG[(PostgreSQL<br/>OLTP + 事实表)]
     RD[(Redis<br/>队列/缓存)]
-    S3[(S3 / MinIO / OSS<br/>原始快照)]
+    S3[(S3 兼容存储<br/>SeaweedFS / S3 / OSS<br/>原始快照)]
     CH[(P2: ClickHouse)]
   end
   WEB --> API --> Monolith
@@ -128,7 +128,9 @@ sequenceDiagram
 ```
 
 - **幂等**：`query_tasks.idempotency_key = sha256(project|prompt|engine|locale|sample|bucket)`。定时运行的 bucket 是 UTC 日期（防止重复触发），手动运行的 bucket 是 run id。任务重投时，已完成的任务直接跳过；重新分析会替换旧事实，不会重复写入。
-- **失败**：单个任务失败只计入 `failed_tasks`，不影响整次运行；所有任务都结束后 run 进入 `completed`（全部失败则为 `failed`）。
+- **快照先于解析**：原始答案先写入对象存储，并把 URI 记到 `query_tasks.raw_uri`，然后才解析。解析器出 bug 也不会丢失答案。
+- **重试**：适配器把网络错误、429 和 5xx 抛成 `TransientEngineError`，collection 会带指数退避重新入队（`RETRY_BASE_SECONDS·2^(n-1)`，最多 `MAX_ATTEMPTS=3` 次）。重试策略写在 service 里而不是 Celery 里，这样换传输方式（P2 的拉模式 Agent）时不受影响。S3 客户端自带连接重试。
+- **失败**：其他任何异常都会把任务标为 `failed` 并计入 `failed_tasks`，保证每次运行都会结束，不会卡在 running。所有任务都结束后 run 进入 `completed`（全部失败则为 `failed`）。这些路径都有集成测试：`tests/integration/test_collection_failures.py`。
 
 ### 5.2 站点 GEO 审计
 
@@ -187,7 +189,7 @@ P1 后续：LLM 情感评判（小模型加缓存）、歧义品牌的 LLM 兜�
 | 存储 | 用途 | 说明 |
 |---|---|---|
 | PostgreSQL | 配置、运行、事实表、指标 | P1 唯一主库；事实表只追加，结构可直接迁到 ClickHouse |
-| 对象存储 | 原始快照 `raw/{workspace}/{engine}/{date}/{task}.json` | 不可变；本地 `local`，生产 `s3`（MinIO/S3/OSS） |
+| 对象存储 | 原始快照 `raw/{workspace}/{engine}/{date}/{task}.json` | 不可变；本地 `local`，生产 `s3`（任意 S3 兼容：AWS S3、阿里云 OSS、SeaweedFS……） |
 | Redis | Celery broker/backend | P1 后续：按引擎令牌桶限流、LLM 评判缓存 |
 | P2 ClickHouse | mentions/citations 时序事实 | 由演进触发器决定（§8.3） |
 | P2 pgvector | 答案语义聚类 | — |
@@ -264,7 +266,7 @@ P1 后续：LLM 情感评判（小模型加缓存）、歧义品牌的 LLM 兜�
 
 ## 9. 部署与运行
 
-- **本地**：`make deps`（在 Docker 里起 Postgres、Redis、MinIO）→ `make migrate` → `make api` / `make worker` / `make web` → `make demo`
+- **本地**：`make deps`（在 Docker 里起 Postgres、Redis、SeaweedFS S3）→ `make migrate` → `make api` / `make worker` / `make web` → `make demo`
 - **一体化**：`make up`（docker compose 起全部服务，包含 migrate、api、worker、web）
 - **P2**：K8s 部署；collect.cn 和 collect.global 的 worker 按区域部署；数据面按客户所在区域驻留（国内客户的数据落在国内）
 - **可观测性**（P1 后续）：结构化日志、OpenTelemetry trace（贯穿 HTTP → 任务 → 事件链路）、Sentry；按引擎统计成功率、延迟和成本

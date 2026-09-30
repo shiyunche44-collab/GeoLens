@@ -15,6 +15,10 @@ Mode = Literal["api", "browser", "serp", "mock"]
 Fidelity = Literal["ui", "api_search", "api_no_search", "synthetic"]
 
 
+class TransientEngineError(Exception):
+    """Retryable failure (network error, 429, 5xx). Anything else fails the task."""
+
+
 @dataclass(frozen=True)
 class QueryRequest:
     prompt: str

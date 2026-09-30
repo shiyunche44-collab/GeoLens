@@ -2,7 +2,7 @@
 
 Revision ID: 0001
 Revises: 
-Create Date: 2026-09-30 08:50:15.469566
+Create Date: 2026-09-30 09:14:25.170669
 """
 from collections.abc import Sequence
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 
-revision: str = "0001"
+revision: str = '0001'
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -199,6 +199,7 @@ def upgrade() -> None:
     sa.Column('status', sa.String(length=16), nullable=False),
     sa.Column('attempts', sa.Integer(), nullable=False),
     sa.Column('error', sa.Text(), nullable=True),
+    sa.Column('raw_uri', sa.String(length=1024), nullable=True),
     sa.Column('workspace_id', sa.Uuid(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['run_id'], ['runs.id'], name=op.f('fk_query_tasks_run_id_runs')),

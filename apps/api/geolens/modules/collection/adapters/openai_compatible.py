@@ -23,6 +23,7 @@ from geolens.modules.collection.adapters.base import (
     QueryRequest,
     RawResponse,
     Region,
+    TransientEngineError,
 )
 
 _URL_RE = re.compile(r"https?://[^\s)\]>\"'，。]+")
@@ -122,12 +123,17 @@ class OpenAICompatibleAdapter:
         }
         started = time.monotonic()
         async with httpx.AsyncClient(timeout=get_settings().http_timeout_seconds) as client:
-            resp = await client.post(
-                f"{self.spec.base_url}/chat/completions",
-                json=body,
-                headers={"Authorization": f"Bearer {self.spec.api_key()}"},
-            )
-            resp.raise_for_status()
+            try:
+                resp = await client.post(
+                    f"{self.spec.base_url}/chat/completions",
+                    json=body,
+                    headers={"Authorization": f"Bearer {self.spec.api_key()}"},
+                )
+            except httpx.TransportError as e:
+                raise TransientEngineError(f"{self.engine_id}: {e!r}") from e
+        if resp.status_code == 429 or resp.status_code >= 500:
+            raise TransientEngineError(f"{self.engine_id}: HTTP {resp.status_code}")
+        resp.raise_for_status()
         payload: dict[str, Any] = resp.json()
         usage = payload.get("usage") or {}
         return RawResponse(

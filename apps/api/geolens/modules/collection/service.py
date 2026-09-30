@@ -11,7 +11,7 @@ from geolens.core.queue import enqueue
 from geolens.core.storage import get_storage
 from geolens.core.tenancy import current_workspace_id
 from geolens.modules.collection.adapters import registry
-from geolens.modules.collection.adapters.base import QueryRequest
+from geolens.modules.collection.adapters.base import QueryRequest, TransientEngineError
 from geolens.modules.collection.events import RESPONSE_COLLECTED, RUN_COMPLETED
 from geolens.modules.collection.models import QueryTask, Response, Run
 from geolens.modules.collection.repository import (
@@ -26,6 +26,8 @@ from geolens.modules.projects import public as projects
 log = logging.getLogger(__name__)
 
 COLLECT_TASK = "collection.collect"
+MAX_ATTEMPTS = 3
+RETRY_BASE_SECONDS = 10
 
 
 class RunNotFoundError(LookupError):
@@ -123,12 +125,17 @@ def plan_run(project_id: uuid.UUID, data: RunCreate, trigger: str = "manual") ->
 
 
 def collect(task_id: uuid.UUID) -> None:
-    """Execute one QueryTask: ask the engine, snapshot the raw answer, emit an event."""
+    """Execute one QueryTask: ask the engine, snapshot the raw answer, parse, emit events.
+
+    Every exit path marks the task done or failed (so the run always finishes), or
+    re-enqueues it with backoff after a TransientEngineError (up to MAX_ATTEMPTS).
+    """
     with session_scope() as s:
         task = QueryTaskRepository(s).get(task_id)
-        if task is None or task.status == "done":
+        if task is None or task.status != "pending":
             return  # idempotent: redelivered message
         task.attempts += 1
+        attempts = task.attempts
         req = QueryRequest(prompt=task.prompt_text, locale=task.locale, sample_idx=task.sample_idx)
         engine_id, run_id, prompt_id = task.engine_id, task.run_id, task.prompt_id
 
@@ -136,19 +143,24 @@ def collect(task_id: uuid.UUID) -> None:
     ws = current_workspace_id()
     try:
         raw = asyncio.run(adapter.query(req))
-        parsed = adapter.parse(raw)
-    except Exception as e:
-        log.exception("collect failed task=%s engine=%s", task_id, engine_id)
-        with session_scope() as s:
-            t = QueryTaskRepository(s).get(task_id)
-            assert t is not None
-            t.status, t.error = "failed", repr(e)[:2000]
-            run = RunRepository(s).bump(run_id, failed=True)
-            project_id, finished = run.project_id, _maybe_finish(run)
-        if finished:
-            events.publish(
-                RUN_COMPLETED, workspace_id=ws, run_id=str(run_id), project_id=str(project_id)
+    except TransientEngineError as e:
+        if attempts < MAX_ATTEMPTS:
+            # Retry policy lives here, not in Celery, so it survives a transport change
+            # (P2 region agents pull tasks over HTTPS).
+            delay = RETRY_BASE_SECONDS * 2 ** (attempts - 1)
+            log.warning("transient error task=%s attempt=%s: %r", task_id, attempts, e)
+            enqueue(
+                COLLECT_TASK,
+                workspace_id=ws,
+                queue=f"collect.{adapter.region}",
+                countdown=delay,
+                task_id=str(task_id),
             )
+            return
+        _fail(task_id, run_id, e)
+        return
+    except Exception as e:
+        _fail(task_id, run_id, e)
         return
 
     identity.record_usage(
@@ -157,17 +169,27 @@ def collect(task_id: uuid.UUID) -> None:
         cost_usd=raw.cost_usd,
         meta={"model": raw.model, "latency_ms": raw.latency_ms},
     )
-    day = utcnow().date().isoformat()
-    raw_uri = get_storage().put_json(
-        f"raw/{ws}/{engine_id}/{day}/{task_id}.json",
-        {
-            "engine_id": engine_id,
-            "request": req.__dict__,
-            "model": raw.model,
-            "latency_ms": raw.latency_ms,
-            "payload": raw.payload,
-        },
-    )
+    try:
+        # Raw snapshot BEFORE parsing (ADR-0003): a parser bug must not lose the answer.
+        raw_uri = get_storage().put_json(
+            f"raw/{ws}/{engine_id}/{utcnow().date().isoformat()}/{task_id}.json",
+            {
+                "engine_id": engine_id,
+                "request": req.__dict__,
+                "model": raw.model,
+                "latency_ms": raw.latency_ms,
+                "payload": raw.payload,
+            },
+        )
+        with session_scope() as s:
+            t = QueryTaskRepository(s).get(task_id)
+            assert t is not None
+            t.raw_uri = raw_uri
+        parsed = adapter.parse(raw)
+    except Exception as e:
+        _fail(task_id, run_id, e)
+        return
+
     with session_scope() as s:
         t = QueryTaskRepository(s).get(task_id)
         assert t is not None
@@ -202,6 +224,23 @@ def collect(task_id: uuid.UUID) -> None:
     if finished:
         events.publish(
             RUN_COMPLETED, workspace_id=ws, run_id=str(run_id), project_id=str(project_id)
+        )
+
+
+def _fail(task_id: uuid.UUID, run_id: uuid.UUID, error: object) -> None:
+    log.error("collect failed task=%s: %r", task_id, error, exc_info=isinstance(error, Exception))
+    with session_scope() as s:
+        t = QueryTaskRepository(s).get(task_id)
+        assert t is not None
+        t.status, t.error = "failed", repr(error)[:2000]
+        run = RunRepository(s).bump(run_id, failed=True)
+        project_id, finished = run.project_id, _maybe_finish(run)
+    if finished:
+        events.publish(
+            RUN_COMPLETED,
+            workspace_id=current_workspace_id(),
+            run_id=str(run_id),
+            project_id=str(project_id),
         )
 
 

@@ -17,6 +17,11 @@ def register(
     _enabled[engine_id] = enabled
 
 
+def unregister(engine_id: str) -> None:
+    _factories.pop(engine_id, None)
+    _enabled.pop(engine_id, None)
+
+
 def get(engine_id: str) -> EngineAdapter:
     try:
         return _factories[engine_id]()

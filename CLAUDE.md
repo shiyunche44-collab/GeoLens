@@ -3,7 +3,7 @@
 GEO（Generative Engine Optimization）检测分析平台：监测品牌在 AI 生成式引擎（DeepSeek、豆包、Kimi、通义、ChatGPT、Perplexity……）答案中的可见度，并审计网站对 AI 的友好度。长期演进：工具 → SaaS → 开放平台。
 
 - 架构总览：`docs/architecture.md`（**先读**）· 路线图与阶段边界：`docs/roadmap.md` · 决策记录：`docs/adr/`
-- 后端 `apps/api`：Python 3.12 · FastAPI · SQLAlchemy 2 · Celery · Postgres · Redis · S3/MinIO（模块化单体）
+- 后端 `apps/api`：Python 3.12 · FastAPI · SQLAlchemy 2 · Celery · Postgres · Redis · S3 兼容对象存储（模块化单体）
 - 前端 `apps/web`：Next.js App Router · TanStack Query · 由 `openapi.json` 生成的类型化客户端
 
 ## 常用命令（仓库根目录）

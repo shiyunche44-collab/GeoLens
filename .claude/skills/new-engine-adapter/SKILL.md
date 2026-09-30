@@ -25,6 +25,8 @@ Engines live in `apps/api/geolens/modules/collection/adapters/`. Read `base.py` 
 
 - Network only through `httpx` inside `adapters/` (architecture test `test_external_deps`).
 - Never parse-and-drop: the payload is persisted as the raw snapshot by the service.
+- Raise `TransientEngineError` (from `adapters/base.py`) for retryable failures — network
+  errors, HTTP 429, 5xx — so the service retries with backoff; any other exception fails the task.
 - Report token/credit usage in `RawResponse.units` (and `cost_usd` when known) — it is metered.
 - No secrets in code or fixtures; keys come from env (`.env.example` — add the key there).
 

@@ -1,3 +1,4 @@
+import os
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -20,6 +21,8 @@ def migrated_db() -> None:
         with get_engine().connect() as conn:
             conn.execute(text("select 1"))
     except OperationalError:
+        if os.environ.get("CI"):  # never let CI go green by silently skipping these
+            pytest.fail("PostgreSQL not reachable in CI (check GEOLENS_DATABASE_URL)")
         pytest.skip("PostgreSQL not reachable (set GEOLENS_DATABASE_URL)")
     with get_engine().begin() as conn:
         conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))

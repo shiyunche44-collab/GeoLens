@@ -48,8 +48,15 @@ def tenant_task(name: str, queue: str = "default", **opts: Any) -> Callable[...,
 
 
 def enqueue(
-    task_name: str, *, workspace_id: uuid.UUID, queue: str | None = None, **kwargs: Any
+    task_name: str,
+    *,
+    workspace_id: uuid.UUID,
+    queue: str | None = None,
+    countdown: float | None = None,
+    **kwargs: Any,
 ) -> None:
     task = celery_app.tasks[task_name]
     options: dict[str, Any] = {"queue": queue} if queue else {}
+    if countdown:
+        options["countdown"] = countdown
     task.apply_async(kwargs={"workspace_id": str(workspace_id), **kwargs}, **options)

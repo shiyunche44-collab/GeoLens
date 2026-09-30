@@ -11,6 +11,7 @@
 **新增引擎**：
 - OpenAI 兼容接口 → 在 `adapters/openai_compatible.py` 的 `SPECS` 加一行
 - 其他 → 在 `adapters/` 新建实现 `EngineAdapter` 协议的类，并在 `adapters/__init__.py` 注册
+- 可重试的失败（网络、429、5xx）抛 `TransientEngineError`，service 会带退避重试；其他异常直接判任务失败
 - 两种情况都**必须**在 `tests/fixtures/engines/<engine_id>.json` 提供录制的响应夹具，契约测试会自动覆盖（使用 `/new-engine-adapter` skill）
 
 **演进**：P1 增加 schedules（Celery Beat）、按引擎令牌桶限流、SERP 型适配器（Google AI Overviews）；P2 改为区域采集 Agent 拉模式、浏览器采集模式。

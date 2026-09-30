@@ -1,6 +1,6 @@
 # GeoLens API & Workers
 
-Python 3.12 · FastAPI · SQLAlchemy 2 · Celery · PostgreSQL · Redis · S3/MinIO
+Python 3.12 · FastAPI · SQLAlchemy 2 · Celery · PostgreSQL · Redis · S3-compatible storage
 
 See the repository root `README.md` and `docs/architecture.md`.
 

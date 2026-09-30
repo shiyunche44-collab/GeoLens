@@ -24,7 +24,7 @@ docs/        架构、路线图、ADR、技术债登记
 ```bash
 cp .env.example .env        # 可选：填入引擎 API Key（不填也能用 mock 引擎跑通）
 make setup                  # 安装 API 与 web 依赖
-make deps                   # Docker 启动 Postgres / Redis / MinIO
+make deps                   # Docker 启动 Postgres / Redis / S3（SeaweedFS）
 make migrate
 make api                    # 终端 1：http://localhost:8000/docs
 make worker                 # 终端 2

@@ -1,5 +1,6 @@
 """Immutable raw-snapshot storage (ADR-0003). The only place allowed to import boto3."""
 
+import contextlib
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -32,6 +33,7 @@ class LocalStorage:
 class S3Storage:
     def __init__(self) -> None:
         import boto3
+        from botocore.config import Config
 
         s = get_settings()
         self.bucket = s.s3_bucket
@@ -41,7 +43,18 @@ class S3Storage:
             aws_access_key_id=s.s3_access_key,
             aws_secret_access_key=s.s3_secret_key,
             region_name=s.s3_region,
+            # Retries connection errors and throttling with backoff (e.g. S3 still starting).
+            config=Config(retries={"max_attempts": 6, "mode": "standard"}, connect_timeout=5),
         )
+        try:
+            self.client.head_bucket(Bucket=self.bucket)
+        except self.client.exceptions.ClientError:
+            # Several worker processes may race to create it.
+            with contextlib.suppress(
+                self.client.exceptions.BucketAlreadyOwnedByYou,
+                self.client.exceptions.BucketAlreadyExists,
+            ):
+                self.client.create_bucket(Bucket=self.bucket)
 
     def put_json(self, key: str, data: dict[str, Any]) -> str:
         body = json.dumps(data, ensure_ascii=False).encode("utf-8")

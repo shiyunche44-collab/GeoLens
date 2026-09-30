@@ -17,8 +17,8 @@ setup: ## Install API + web dependencies
 	cd $(API) && uv sync
 	cd $(WEB) && pnpm install
 
-deps: ## Start Postgres, Redis, MinIO in Docker
-	docker compose up -d postgres redis minio minio-init
+deps: ## Start Postgres, Redis, S3 (SeaweedFS) in Docker
+	docker compose up -d postgres redis s3
 
 up: ## Run the whole stack in Docker (api, worker, web + deps)
 	docker compose up -d --build
